@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Expense Tracker | خرچہ ٹریکر</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f0eb; --surface:#fffdf9; --surface2:#f0ece5;
+  --ink:#1a1612; --ink2:#5c5650; --ink3:#9e9890;
+  --green:#2d7a4f; --green-bg:#e8f5ee;
+  --red:#c0392b; --red-bg:#fdecea;
+  --gold:#c47f1a; --gold-bg:#fef3dc;
+  --blue:#1a5fa8; --blue-bg:#e8f0fa;
+  --border:#e2ddd6; --shadow:0 2px 12px rgba(26,22,18,.08);
+  --shadow-lg:0 8px 40px rgba(26,22,18,.14); --r:16px; --r-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+body.urdu-mode{font-family:'Noto Nastaliq Urdu',serif;direction:rtl}
+body.urdu-mode .ltr{direction:ltr;font-family:'Plus Jakarta Sans',sans-serif}
+
+/* ── Screens ── */
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+
+/* ── Language Screen ── */
+#lang-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 20px;background:var(--bg)}
+.lang-logo{width:80px;height:80px;background:var(--ink);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:28px;box-shadow:var(--shadow-lg);animation:pop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.lang-title{font-size:1.6rem;font-weight:800;text-align:center;margin-bottom:8px;line-height:1.3}
+.lang-sub{color:var(--ink3);text-align:center;font-size:.9rem;margin-bottom:48px}
+.lang-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:420px}
+.lang-card{background:var(--surface);border:2px solid var(--border);border-radius:20px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.lang-card:hover{border-color:var(--ink);transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.lang-card .flag{font-size:40px;margin-bottom:12px}
+.lang-card .lang-name{font-size:1.1rem;font-weight:700}
+.lang-card .lang-native{font-size:.8rem;color:var(--ink3);margin-top:4px}
+.lang-card.urdu-card .lang-name{font-family:'Noto Nastaliq Urdu',serif;font-size:1.4rem;direction:rtl}
+
+/* ── App Shell ── */
+#app-screen{padding-bottom:90px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(26,22,18,.06)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-icon{width:36px;height:36px;background:var(--ink);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.topbar-title{font-size:1rem;font-weight:700}
+.topbar-sub{font-size:.72rem;color:var(--ink3)}
+.lang-switch-btn{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:.78rem;font-weight:600;cursor:pointer;color:var(--ink);display:flex;align-items:center;gap:5px;font-family:inherit}
+
+/* Offline badge */
+.conn-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:600;margin-left:8px}
+.conn-online{background:var(--green-bg);color:var(--green)}
+.conn-offline{background:var(--red-bg);color:var(--red)}
+
+/* ── Balance Card ── */
+.balance-card{margin:20px 16px 0;background:var(--ink);border-radius:24px;padding:28px 24px;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(26,22,18,.25)}
+.balance-card::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.05)}
+.balance-card::after{content:'';position:absolute;bottom:-40px;left:-20px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.04)}
+.bal-label{font-size:.75rem;opacity:.6;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.bal-amount{font-size:2.4rem;font-weight:800;letter-spacing:-1px;font-family:'Plus Jakarta Sans',sans-serif!important;direction:ltr!important}
+.bal-usd{font-size:.82rem;opacity:.5;margin-top:5px;font-family:'Plus Jakarta Sans',sans-serif;direction:ltr}
+.bal-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1)}
+.bal-stat-label{font-size:.7rem;opacity:.5;margin-bottom:4px}
+.bal-stat-val{font-size:1rem;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif!important;direction:ltr!important}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:90px;right:20px;width:58px;height:58px;background:var(--ink);border-radius:18px;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(26,22,18,.35);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;z-index:99;transition:transform .15s}
+.fab:active{transform:scale(.92)}
+
+/* ── Bottom Nav ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);padding:8px 0 14px;z-index:100;box-shadow:0 -4px 20px rgba(26,22,18,.08)}
+.nav-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 0;color:var(--ink3);transition:color .15s;font-family:inherit}
+.nav-btn.active{color:var(--ink)}
+.nav-icon{font-size:22px}
+.nav-label{font-size:.65rem;font-weight:600}
+
+/* ── Panels ── */
+.panel{display:none;padding:16px}
+.panel.active{display:block}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:1.05rem;font-weight:700}
+.sec-count{background:var(--surface2);padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;color:var(--ink2)}
+
+/* ── Form ── */
+.form-card{background:var(--surface);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.form-step{display:none;animation:fadeUp .3s ease}
+.form-step.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.step-indicator{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s}
+.step-dot.done{background:var(--green)}
+.step-dot.active{background:var(--ink);width:24px;border-radius:4px}
+.step-title{font-size:1rem;font-weight:700;margin-bottom:6px}
+.step-hint{font-size:.8rem;color:var(--ink3);margin-bottom:20px;line-height:1.5}
+.amount-input-wrap{position:relative;margin-bottom:16px}
+.amount-prefix{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1.2rem;font-weight:700;color:var(--ink2);font-family:'Plus Jakarta Sans',sans-serif;pointer-events:none}
+body.urdu-mode .amount-prefix{left:auto;right:16px}
+.amount-input{width:100%;padding:18px 18px 18px 56px;font-size:2rem;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif!important;direction:ltr!important;background:var(--surface2);border:2px solid var(--border);border-radius:var(--r-sm);outline:none;color:var(--ink);transition:border-color .2s}
+.amount-input:focus{border-color:var(--ink)}
+body.urdu-mode .amount-input{padding:18px 56px 18px 18px}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.cat-btn{background:var(--surface2);border:2px solid var(--border);border-radius:var(--r-sm);padding:14px 8px;text-align:center;cursor:pointer;transition:all .15s}
+.cat-btn:hover{border-color:var(--ink2)}
+.cat-btn.selected{background:var(--ink);border-color:var(--ink);color:#fff}
+.cat-icon{font-size:24px;display:block;margin-bottom:5px}
+.cat-label{font-size:.68rem;font-weight:600;line-height:1.2;display:block}
+.field-label{font-size:.75rem;font-weight:600;color:var(--ink2);margin-bottom:7px;display:block}
+.field-input{width:100%;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:.9rem;color:var(--ink);outline:none;transition:border-color .2s;margin-bottom:14px}
+.field-input:focus{border-color:var(--ink)}
+textarea.field-input{resize:vertical;min-height:72px}
+.btn-primary{width:100%;padding:15px;background:var(--ink);color:#fff;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:4px}
+.btn-primary:active{transform:scale(.98);opacity:.9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{width:100%;padding:13px;background:var(--surface2);color:var(--ink);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:8px}
+
+/* ── Expense Items ── */
+.exp-item{background:var(--surface);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;border:1px solid var(--border);box-shadow:var(--shadow);cursor:pointer;transition:transform .15s;animation:fadeUp .25s ease}
+.exp-item:active{transform:scale(.98)}
+.exp-emoji{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.exp-info{flex:1;min-width:0}
+.exp-name{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-cat{font-size:.72rem;color:var(--ink3);margin-top:2px}
+.exp-right{text-align:right;flex-shrink:0}
+.exp-amount{font-size:.95rem;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif!important;direction:ltr!important}
+.exp-date{font-size:.7rem;color:var(--ink3);margin-top:2px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink3)}
+.empty-icon{font-size:52px;margin-bottom:16px;opacity:.5}
+.empty-title{font-size:1rem;font-weight:600;margin-bottom:6px;color:var(--ink2)}
+.empty-sub{font-size:.82rem;line-height:1.6}
+
+/* ── Category Colors ── */
+.bg-food{background:#e8f5ee}.color-food{color:#2d7a4f}
+.bg-transport{background:#e8f0fa}.color-transport{color:#1a5fa8}
+.bg-shopping{background:#f5e8fa}.color-shopping{color:#7a2d8f}
+.bg-bills{background:#fef3dc}.color-bills{color:#c47f1a}
+.bg-education{background:#e8eefa}.color-education{color:#2d4fa8}
+.bg-health{background:#fdecea}.color-health{color:#c0392b}
+.bg-fun{background:#fff0e8}.color-fun{color:#c4521a}
+.bg-salary{background:#e0f7ef}.color-salary{color:#0d6b47}
+.bg-other{background:var(--surface2)}.color-other{color:var(--ink2)}
+
+/* ── Charts ── */
+.chart-card{background:var(--surface);border-radius:var(--r);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px}
+.chart-title{font-size:.88rem;font-weight:700;margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.bar-label{font-size:.75rem;font-weight:600;width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:10px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.bar-val{font-size:.72rem;font-weight:600;width:90px;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;direction:ltr;flex-shrink:0}
+.bud-card{background:var(--surface);border-radius:var(--r);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:12px}
+.bud-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.bud-name{font-size:.88rem;font-weight:700}
+.bud-status{font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:20px}
+.bud-ok{background:var(--green-bg);color:var(--green)}
+.bud-warn{background:var(--gold-bg);color:var(--gold)}
+.bud-over{background:var(--red-bg);color:var(--red)}
+.bud-amounts{font-size:.78rem;color:var(--ink3);margin-bottom:10px;font-family:'Plus Jakarta Sans',sans-serif;direction:ltr}
+.bud-track{height:12px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.bud-fill{height:100%;border-radius:99px;transition:width .6s}
+.bud-form{background:var(--surface);border-radius:var(--r);padding:20px;border:1px solid var(--border);margin-bottom:16px}
+.bud-form-title{font-size:.9rem;font-weight:700;margin-bottom:16px}
+.inline-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── Settings ── */
+.settings-group{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.settings-head{padding:14px 16px;font-size:.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);background:var(--surface2);border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.settings-row:last-child{border-bottom:none}
+.srow-left{display:flex;align-items:center;gap:12px}
+.srow-icon{font-size:20px;width:32px;text-align:center}
+.srow-label{font-size:.88rem;font-weight:600}
+.srow-sub{font-size:.73rem;color:var(--ink3);margin-top:2px}
+.srow-right{font-size:.8rem;color:var(--ink3);font-weight:500}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;padding:28px 20px 36px;width:100%;max-width:540px;animation:slideUp .3s cubic-bezier(.34,1.1,.64,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 24px}
+.modal-title{font-size:1.1rem;font-weight:700;margin-bottom:6px}
+.modal-cat{font-size:.8rem;color:var(--ink3);margin-bottom:20px}
+.modal-amount{font-size:2rem;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;direction:ltr;margin-bottom:24px}
+.modal-meta{background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:20px}
+.modal-meta-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem}
+.modal-meta-key{color:var(--ink3);font-weight:500}
+.modal-meta-val{font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;direction:ltr}
+.btn-delete{width:100%;padding:14px;background:var(--red-bg);color:var(--red);border:1.5px solid rgba(192,57,43,.2);border-radius:var(--r-sm);font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer}
+
+/* ── Toast / Loader ── */
+#toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:99px;font-size:.85rem;font-weight:600;z-index:500;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.search-wrap{position:relative;margin-bottom:14px}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--ink3);pointer-events:none}
+body.urdu-mode .search-icon{left:auto;right:14px}
+.search-input{width:100%;padding:11px 14px 11px 42px;background:var(--surface);border:1.5px solid var(--border);border-radius:99px;font-family:inherit;font-size:.88rem;color:var(--ink);outline:none}
+body.urdu-mode .search-input{padding:11px 42px 11px 14px}
+.search-input:focus{border-color:var(--ink)}
+
+@media(max-width:480px){.inline-form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ── Language Screen ── -->
+<div id="lang-screen">
+  <div class="lang-logo">💰</div>
+  <h1 class="lang-title">Expense Tracker<br>خرچہ ٹریکر</h1>
+  <p class="lang-sub">Choose your language / اپنی زبان منتخب کریں</p>
+  <div class="lang-cards">
+    <div class="lang-card" onclick="setLang('en')">
+      <div class="flag">🇬🇧</div>
+      <div class="lang-name">English</div>
+      <div class="lang-native">Continue in English</div>
+    </div>
+    <div class="lang-card urdu-card" onclick="setLang('ur')">
+      <div class="flag">🇵🇰</div>
+      <div class="lang-name">اردو</div>
+      <div class="lang-native">اردو میں جاری رکھیں</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main App ── -->
+<div id="app-screen" class="screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">💰</div>
+      <div>
+        <div class="topbar-title" id="topbar-title">Expense Tracker</div>
+        <div class="topbar-sub" id="topbar-sub">Your money, organized</div>
+      </div>
+      <span class="conn-badge conn-online" id="conn-badge">● Live</span>
+    </div>
+    <button class="lang-switch-btn" onclick="switchLang()">
+      <span id="lang-flag">🇬🇧</span>
+      <span id="lang-code">EN</span>
+    </button>
+  </div>
+
+  <!-- HOME PANEL -->
+  <div id="home-panel" class="panel active">
+    <div class="balance-card">
+      <div class="bal-label" id="bal-label">TOTAL SPENT</div>
+      <div class="bal-amount ltr" id="bal-amount">PKR 0</div>
+      <div class="bal-usd ltr" id="bal-usd">≈ $0.00 USD</div>
+      <div class="bal-stats">
+        <div>
+          <div class="bal-stat-label" id="bal-entries-label">ENTRIES</div>
+          <div class="bal-stat-val ltr" id="bal-entries">0</div>
+        </div>
+        <div>
+          <div class="bal-stat-label" id="bal-avg-label">AVERAGE</div>
+          <div class="bal-stat-val ltr" id="bal-avg">PKR 0</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div class="sec-head">
+        <span class="sec-title" id="recent-title">Recent Expenses</span>
+        <span class="sec-count" id="recent-count">0</span>
+      </div>
+      <div id="recent-list"></div>
+    </div>
+  </div>
+
+  <!-- ADD PANEL -->
+  <div id="add-panel" class="panel">
+    <div class="sec-head"><span class="sec-title" id="add-title">Add Expense</span></div>
+    <div class="form-card">
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot0"></div>
+        <div class="step-dot" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+      </div>
+      <!-- Step 1 -->
+      <div class="form-step active" id="step0">
+        <div class="step-title" id="s0-title">How much did you spend?</div>
+        <div class="step-hint" id="s0-hint">Enter amount in Pakistani Rupees</div>
+        <div class="amount-input-wrap">
+          <span class="amount-prefix">₨</span>
+          <input type="number" class="amount-input ltr" id="f-amount" placeholder="0" min="0" inputmode="decimal">
+        </div>
+        <label class="field-label" id="s0-desc-label">What did you buy?</label>
+        <input type="text" class="field-input" id="f-name" placeholder="e.g. Lunch at Burns Road">
+        <button class="btn-primary" onclick="goStep(1)">→ <span id="s0-next-label">Next: Choose Category</span></button>
+      </div>
+      <!-- Step 2 -->
+      <div class="form-step" id="step1">
+        <div class="step-title" id="s1-title">What did you spend on?</div>
+        <div class="step-hint" id="s1-hint">Tap the right category</div>
+        <div class="cat-grid" id="cat-grid"></div>
+        <button class="btn-primary" onclick="goStep(2)">→ <span id="s1-next-label">Next: Date & Note</span></button>
+        <button class="btn-secondary" onclick="goStep(0)">← <span id="s1-back-label">Back</span></button>
+      </div>
+      <!-- Step 3 -->
+      <div class="form-step" id="step2">
+        <div class="step-title" id="s2-title">Almost done!</div>
+        <div class="step-hint" id="s2-hint">Add date and optional note</div>
+        <label class="field-label" id="s2-date-label">Date</label>
+        <input type="date" class="field-input ltr" id="f-date">
+        <label class="field-label" id="s2-note-label">Note (optional)</label>
+        <textarea class="field-input" id="f-note" placeholder="Any extra detail…"></textarea>
+        <button class="btn-primary" id="save-btn" onclick="saveExpense()">✓ <span id="s2-save-label">Save Expense</span></button>
+        <button class="btn-secondary" onclick="goStep(1)">← <span id="s2-back-label">Back</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST PANEL -->
+  <div id="list-panel" class="panel">
+    <div class="sec-head">
+      <span class="sec-title" id="list-title">All Expenses</span>
+      <span class="sec-count" id="list-count">0</span>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Search…" oninput="renderList()">
+    </div>
+    <div id="all-list"></div>
+  </div>
+
+  <!-- CHARTS / BUDGET PANEL -->
+  <div id="charts-panel" class="panel">
+    <div class="sec-head"><span class="sec-title" id="charts-title">Budgets & Spending</span></div>
+    <div class="bud-form">
+      <div class="bud-form-title" id="bud-form-title">Set Monthly Budget</div>
+      <div class="inline-form">
+        <div>
+          <label class="field-label" id="bud-cat-label">Category</label>
+          <select class="field-input" id="bud-cat" style="margin-bottom:0"></select>
+        </div>
+        <div>
+          <label class="field-label" id="bud-amt-label">Limit (PKR)</label>
+          <input type="number" class="field-input ltr" id="bud-limit" placeholder="5000" style="margin-bottom:0" inputmode="decimal">
+        </div>
+      </div>
+      <button class="btn-primary" style="margin-top:12px" onclick="setBudget()"><span id="bud-btn-label">Set Budget</span></button>
+    </div>
+    <div id="budget-list"></div>
+    <div class="chart-card">
+      <div class="chart-title" id="chart-title">By Category</div>
+      <div id="cat-bars"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div id="settings-panel" class="panel">
+    <div class="sec-head"><span class="sec-title" id="settings-title">Settings</span></div>
+    <div class="settings-group">
+      <div class="settings-head">LANGUAGE / زبان</div>
+      <div class="settings-row" onclick="setLangFrom('en')">
+        <div class="srow-left"><span class="srow-icon">🇬🇧</span><div><div class="srow-label">English</div></div></div>
+        <span class="srow-right" id="en-check">✓</span>
+      </div>
+      <div class="settings-row" onclick="setLangFrom('ur')">
+        <div class="srow-left"><span class="srow-icon">🇵🇰</span><div><div class="srow-label" style="font-family:'Noto Nastaliq Urdu',serif;direction:rtl">اردو</div></div></div>
+        <span class="srow-right" id="ur-check"></span>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="settings-head" id="sg-currency">CURRENCY</div>
+      <div class="settings-row">
+        <div class="srow-left"><span class="srow-icon">₨</span><div><div class="srow-label" id="curr-label">Pakistani Rupee (PKR)</div></div></div>
+        <span class="srow-right">Active</span>
+      </div>
+      <div class="settings-row">
+        <div class="srow-left"><span class="srow-icon">$</span>
+          <div><div class="srow-label" id="rate-label">USD Rate</div><div class="srow-sub ltr" id="rate-sub">1 USD = PKR 278</div></div>
+        </div>
+        <input type="number" class="field-input ltr" id="usd-rate" value="278" style="width:90px;margin:0;padding:7px 10px;font-size:.85rem" onchange="usdRate=parseFloat(this.value)||278;localStorage.setItem('usdRate',usdRate);document.getElementById('rate-sub').textContent='1 USD = PKR '+usdRate;renderBalance()">
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="settings-head" id="sg-data">DATA</div>
+      <div class="settings-row" onclick="exportCSV()">
+        <div class="srow-left"><span class="srow-icon">📤</span><div><div class="srow-label" id="export-label">Export CSV</div></div></div>
+        <span class="srow-right">→</span>
+      </div>
+      <div class="settings-row" onclick="clearAll()">
+        <div class="srow-left"><span class="srow-icon">🗑</span><div><div class="srow-label" style="color:var(--red)" id="clear-label">Clear All Data</div></div></div>
+        <span class="srow-right" style="color:var(--red)">→</span>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:.72rem;color:var(--ink3);padding:20px;line-height:1.8" id="footer-text">
+      Smart Expense Tracker · University Project<br>
+      C Language HTTP Backend · Data saved in expenses.json<br>
+      Server: <span class="ltr">http://localhost:8080</span>
+    </p>
+  </div>
+
+  <button class="fab" onclick="openAdd()" id="fab-btn">+</button>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="showPanel('home')">
+      <span class="nav-icon">🏠</span><span class="nav-label" id="nav-home-label">Home</span>
+    </button>
+    <button class="nav-btn" id="nav-list" onclick="showPanel('list')">
+      <span class="nav-icon">📋</span><span class="nav-label" id="nav-list-label">Expenses</span>
+    </button>
+    <button class="nav-btn" id="nav-charts" onclick="showPanel('charts')">
+      <span class="nav-icon">📊</span><span class="nav-label" id="nav-charts-label">Budgets</span>
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="showPanel('settings')">
+      <span class="nav-icon">⚙️</span><span class="nav-label" id="nav-settings-label">Settings</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Expense Detail Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-cat"  id="modal-cat"></div>
+    <div class="modal-amount ltr" id="modal-amount"></div>
+    <div class="modal-meta">
+      <div class="modal-meta-row"><span class="modal-meta-key" id="m-date-key">Date</span><span class="modal-meta-val" id="m-date-val"></span></div>
+      <div class="modal-meta-row"><span class="modal-meta-key" id="m-note-key">Note</span><span class="modal-meta-val" id="m-note-val">—</span></div>
+    </div>
+    <button class="btn-delete" onclick="deleteFromModal()" id="del-btn-label">🗑 Delete Expense</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════
+   TRANSLATIONS
+══════════════════════════════ */
+const T={
+en:{
+  topbar_title:'Expense Tracker',topbar_sub:'Your money, organized',
+  bal_label:'TOTAL SPENT',bal_entries_label:'ENTRIES',bal_avg_label:'AVERAGE',
+  recent_title:'Recent Expenses',add_title:'Add Expense',list_title:'All Expenses',
+  charts_title:'Budgets & Spending',settings_title:'Settings',
+  s0_title:'How much did you spend?',s0_hint:'Enter amount in Pakistani Rupees',
+  s0_desc_label:'What did you buy?',s0_desc_ph:'e.g. Lunch at Burns Road',
+  s0_next_label:'Next: Choose Category',
+  s1_title:'What did you spend on?',s1_hint:'Tap the right category',
+  s1_next_label:'Next: Date & Note',s1_back_label:'Back',
+  s2_title:'Almost done!',s2_hint:'Add date and optional note',
+  s2_date_label:'Date',s2_note_label:'Note (optional)',s2_note_ph:'Any extra detail…',
+  s2_save_label:'Save Expense',s2_back_label:'Back',
+  search_ph:'Search expenses…',
+  bud_form_title:'Set Monthly Budget',bud_cat_label:'Category',
+  bud_amt_label:'Limit (PKR)',bud_btn_label:'Set Budget',chart_title:'By Category',
+  curr_label:'Pakistani Rupee (PKR)',rate_label:'USD Rate',
+  export_label:'Export CSV',clear_label:'Clear All Data',
+  nav_home:'Home',nav_list:'Expenses',nav_charts:'Budgets',nav_settings:'Settings',
+  m_date_key:'Date',m_note_key:'Note',
+  del_btn:'🗑 Delete Expense',
+  toast_added:'✅ Saved!',toast_deleted:'🗑 Deleted',toast_cleared:'🧹 Cleared',toast_budget:'💼 Budget set',
+  empty_title:'No expenses yet',empty_sub:'Tap + to add your first expense',
+  bud_ok:'On Track',bud_warn:'Warning',bud_over:'Over Budget',
+  conn_on:'● Live (C Server)',conn_off:'● Offline',
+  cats:{Food:'🍛 Food & Dining',Transport:'🚗 Transport',Shopping:'🛍 Shopping',
+    Bills:'💡 Bills',Education:'📚 Education',Health:'🏥 Health',
+    Fun:'🎮 Entertainment',Salary:'💵 Salary/Income',Other:'📦 Other'}
+},
+ur:{
+  topbar_title:'خرچہ ٹریکر',topbar_sub:'آپ کا پیسہ، منظم',
+  bal_label:'کل خرچ',bal_entries_label:'اندراجات',bal_avg_label:'اوسط',
+  recent_title:'حالیہ خرچے',add_title:'خرچہ شامل کریں',list_title:'تمام خرچے',
+  charts_title:'بجٹ اور خرچے',settings_title:'ترتیبات',
+  s0_title:'آپ نے کتنا خرچ کیا؟',s0_hint:'رقم روپوں میں لکھیں',
+  s0_desc_label:'کیا خریدا؟',s0_desc_ph:'مثلاً: برن روڈ پر بریانی',
+  s0_next_label:'اگلا: قسم چنیں',
+  s1_title:'کس چیز پر خرچ کیا؟',s1_hint:'مناسب قسم چنیں',
+  s1_next_label:'اگلا: تاریخ',s1_back_label:'واپس',
+  s2_title:'تقریباً مکمل!',s2_hint:'تاریخ اور نوٹ شامل کریں',
+  s2_date_label:'تاریخ',s2_note_label:'نوٹ (اختیاری)',s2_note_ph:'کوئی تفصیل…',
+  s2_save_label:'خرچہ محفوظ کریں',s2_back_label:'واپس',
+  search_ph:'خرچے تلاش کریں…',
+  bud_form_title:'ماہانہ بجٹ مقرر کریں',bud_cat_label:'قسم',
+  bud_amt_label:'حد (روپے)',bud_btn_label:'بجٹ مقرر کریں',chart_title:'قسم کے مطابق',
+  curr_label:'پاکستانی روپیہ (PKR)',rate_label:'ڈالر شرح',
+  export_label:'CSV فائل بنائیں',clear_label:'تمام ڈیٹا مٹائیں',
+  nav_home:'گھر',nav_list:'خرچے',nav_charts:'بجٹ',nav_settings:'ترتیبات',
+  m_date_key:'تاریخ',m_note_key:'نوٹ',
+  del_btn:'🗑 خرچہ مٹائیں',
+  toast_added:'✅ محفوظ ہو گیا!',toast_deleted:'🗑 مٹا دیا',toast_cleared:'🧹 ڈیٹا صاف',toast_budget:'💼 بجٹ مقرر',
+  empty_title:'ابھی کوئی خرچہ نہیں',empty_sub:'نیچے + بٹن دبائیں',
+  bud_ok:'ٹھیک ہے',bud_warn:'خبردار',bud_over:'بجٹ ختم',
+  conn_on:'● لائیو (C سرور)',conn_off:'● آف لائن',
+  cats:{Food:'🍛 کھانا',Transport:'🚗 سفر',Shopping:'🛍 خریداری',
+    Bills:'💡 بل',Education:'📚 تعلیم',Health:'🏥 صحت',
+    Fun:'🎮 تفریح',Salary:'💵 تنخواہ',Other:'📦 دیگر'}
+}};
+
+/* ══════════════════════════════
+   STATE
+══════════════════════════════ */
+let lang = localStorage.getItem('lang') || null;
+let usdRate = parseFloat(localStorage.getItem('usdRate') || '278');
+let allExpenses = [];
+let allBudgets  = [];
+let selectedCat = 'Food';
+let currentStep = 0;
+let modalExpId  = null;
+const API = 'http://localhost:8080';
+const CATS = ['Food','Transport','Shopping','Bills','Education','Health','Fun','Salary','Other'];
+const CAT_CLR = {Food:'food',Transport:'transport',Shopping:'shopping',Bills:'bills',Education:'education',Health:'health',Fun:'fun',Salary:'salary',Other:'other'};
+
+/* ══════════════════════════════
+   API CALLS  (C Backend)
+══════════════════════════════ */
+async function apiFetch(path, opts={}) {
+  try {
+    const res = await fetch(API+path, {headers:{'Content-Type':'application/json'},...opts});
+    return await res.json();
+  } catch(e) {
+    setConn(false); return null;
+  }
+}
+
+async function loadAll() {
+  const [exps, buds, sum] = await Promise.all([
+    apiFetch('/api/expenses'),
+    apiFetch('/api/budgets'),
+    apiFetch('/api/summary')
+  ]);
+  if (exps !== null) { setConn(true); allExpenses = exps; }
+  if (buds !== null) allBudgets = buds;
+  if (sum  !== null) renderSummary(sum);
+  renderRecent(); renderList(); renderCharts(); renderBudgets();
+}
+
+async function apiAddExpense(data) {
+  const res = await apiFetch('/api/expenses', {method:'POST', body:JSON.stringify(data)});
+  return res;
+}
+
+async function apiDeleteExpense(id) {
+  const res = await apiFetch('/api/expenses/'+id, {method:'DELETE'});
+  return res;
+}
+
+async function apiSetBudget(data) {
+  const res = await apiFetch('/api/budgets', {method:'POST', body:JSON.stringify(data)});
+  return res;
+}
+
+function setConn(online) {
+  const el = document.getElementById('conn-badge');
+  if (online) {
+    el.className='conn-badge conn-online';
+    el.textContent = t('conn_on');
+  } else {
+    el.className='conn-badge conn-offline';
+    el.textContent = t('conn_off');
+  }
+}
+
+/* ══════════════════════════════
+   TRANSLATIONS
+══════════════════════════════ */
+function t(k) { return (T[lang||'en'][k]||T.en[k]||k); }
+
+function applyLang() {
+  const ur = lang==='ur';
+  document.body.classList.toggle('urdu-mode',ur);
+  document.getElementById('lang-flag').textContent = ur?'🇵🇰':'🇬🇧';
+  document.getElementById('lang-code').textContent = ur?'اردو':'EN';
+  document.getElementById('en-check').textContent = ur?'':'✓';
+  document.getElementById('ur-check').textContent = ur?'✓':'';
+  const map={
+    'topbar-title':'topbar_title','topbar-sub':'topbar_sub','bal-label':'bal_label',
+    'bal-entries-label':'bal_entries_label','bal-avg-label':'bal_avg_label',
+    'recent-title':'recent_title','add-title':'add_title','list-title':'list_title',
+    'charts-title':'charts_title','settings-title':'settings_title',
+    's0-title':'s0_title','s0-hint':'s0_hint','s0-desc-label':'s0_desc_label',
+    's0-next-label':'s0_next_label','s1-title':'s1_title','s1-hint':'s1_hint',
+    's1-next-label':'s1_next_label','s1-back-label':'s1_back_label',
+    's2-title':'s2_title','s2-hint':'s2_hint','s2-date-label':'s2_date_label',
+    's2-note-label':'s2_note_label','s2-save-label':'s2_save_label','s2-back-label':'s2_back_label',
+    'bud-form-title':'bud_form_title','bud-cat-label':'bud_cat_label',
+    'bud-amt-label':'bud_amt_label','bud-btn-label':'bud_btn_label','chart-title':'chart_title',
+    'curr-label':'curr_label','rate-label':'rate_label',
+    'export-label':'export_label','clear-label':'clear_label',
+    'nav-home-label':'nav_home','nav-list-label':'nav_list',
+    'nav-charts-label':'nav_charts','nav-settings-label':'nav_settings',
+    'm-date-key':'m_date_key','m-note-key':'m_note_key','del-btn-label':'del_btn'
+  };
+  for (const [id,k] of Object.entries(map)) {
+    const el=document.getElementById(id); if(el) el.textContent=t(k);
+  }
+  document.getElementById('f-name').placeholder  = t('s0_desc_ph');
+  document.getElementById('f-note').placeholder  = t('s2_note_ph');
+  document.getElementById('search-input').placeholder = t('search_ph');
+  setConn(true);
+  buildCatGrid(); buildBudCatSelect();
+}
+
+function setLang(l) {
+  lang=l; localStorage.setItem('lang',l);
+  document.getElementById('lang-screen').style.display='none';
+  document.getElementById('app-screen').classList.add('active');
+  applyLang(); loadAll(); showPanel('home');
+}
+function setLangFrom(l) {
+  lang=l; localStorage.setItem('lang',l); applyLang(); loadAll();
+  toast(l==='ur'?'🇵🇰 اردو':'🇬🇧 English');
+}
+function switchLang() { setLangFrom(lang==='ur'?'en':'ur'); }
+
+/* ══════════════════════════════
+   CAT HELPERS
+══════════════════════════════ */
+function catIcon(c) { return (t('cats')[c]||c).split(' ')[0]; }
+function catName(c) { return (t('cats')[c]||c).split(' ').slice(1).join(' ')||c; }
+function catBg(c)   { return 'bg-'+(CAT_CLR[c]||'other'); }
+function catColor(c){ return 'color-'+(CAT_CLR[c]||'other'); }
+function fmt(n) { return 'PKR '+Math.round(n).toLocaleString('en-PK'); }
+
+function buildCatGrid() {
+  document.getElementById('cat-grid').innerHTML = CATS.map(c=>`
+    <div class="cat-btn${selectedCat===c?' selected':''}" onclick="selectCat('${c}')">
+      <span class="cat-icon">${catIcon(c)}</span>
+      <span class="cat-label">${catName(c)}</span>
+    </div>`).join('');
+}
+function selectCat(c) { selectedCat=c; buildCatGrid(); }
+
+function buildBudCatSelect() {
+  document.getElementById('bud-cat').innerHTML =
+    CATS.map(c=>`<option value="${c}">${catIcon(c)} ${catName(c)}</option>`).join('');
+}
+
+/* ══════════════════════════════
+   STEPS
+══════════════════════════════ */
+function goStep(n) {
+  if (n===1) {
+    const amt=parseFloat(document.getElementById('f-amount').value);
+    const nm=document.getElementById('f-name').value.trim();
+    if (!amt||amt<=0||!nm) { toast(lang==='ur'?'⚠️ رقم اور تفصیل لکھیں':'⚠️ Enter amount & description'); return; }
+  }
+  document.getElementById('step'+currentStep).classList.remove('active');
+  if (n>currentStep) {
+    document.getElementById('dot'+currentStep).classList.remove('active');
+    document.getElementById('dot'+currentStep).classList.add('done');
+  } else {
+    for (let i=n;i<=2;i++){
+      document.getElementById('dot'+i).classList.remove('active','done');
+    }
+  }
+  currentStep=n;
+  document.getElementById('step'+n).classList.add('active');
+  document.getElementById('dot'+n).classList.add('active');
+}
+
+/* ══════════════════════════════
+   SAVE / DELETE
+══════════════════════════════ */
+async function saveExpense() {
+  const amt=parseFloat(document.getElementById('f-amount').value);
+  const nm=document.getElementById('f-name').value.trim();
+  if (!amt||!nm){ toast('⚠️ Required!'); return; }
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>';
+
+  const data={name:nm, amount:amt, category:selectedCat,
+    date:document.getElementById('f-date').value||new Date().toISOString().slice(0,10),
+    note:document.getElementById('f-note').value.trim()};
+
+  const res = await apiAddExpense(data);
+  btn.disabled=false;
+  btn.innerHTML='✓ <span id="s2-save-label">'+t('s2_save_label')+'</span>';
+
+  if (res && res.id) {
+    toast(t('toast_added'));
+    resetForm(); await loadAll(); showPanel('home');
+  } else {
+    toast(lang==='ur'?'❌ سرور سے کنکشن نہیں':'❌ Cannot connect to C server');
+  }
+}
+
+async function deleteFromModal() {
+  if (!confirm(lang==='ur'?'کیا آپ واقعی مٹانا چاہتے ہیں؟':'Delete this expense?')) return;
+  const res = await apiDeleteExpense(modalExpId);
+  if (res && res.deleted) {
+    toast(t('toast_deleted')); closeModal(); await loadAll();
+  } else {
+    toast('❌ Delete failed');
+  }
+}
+
+async function setBudget() {
+  const cat=document.getElementById('bud-cat').value;
+  const lim=parseFloat(document.getElementById('bud-limit').value);
+  if (!lim||lim<=0){ toast(lang==='ur'?'⚠️ حد لکھیں':'⚠️ Enter limit'); return; }
+  const res = await apiSetBudget({category:cat, limit:lim});
+  if (res) {
+    document.getElementById('bud-limit').value='';
+    toast(t('toast_budget')); await loadAll();
+  }
+}
+
+async function clearAll() {
+  if (!confirm(lang==='ur'?'تمام ڈیٹا مٹانا ہے؟':'Delete ALL data?')) return;
+  for (const e of [...allExpenses]) await apiDeleteExpense(e.id);
+  toast(t('toast_cleared')); await loadAll();
+}
+
+/* ══════════════════════════════
+   RENDER
+══════════════════════════════ */
+function renderSummary(sum) {
+  document.getElementById('bal-amount').textContent  = fmt(sum.total||0);
+  document.getElementById('bal-usd').textContent     = '≈ $'+((sum.total||0)/usdRate).toFixed(2)+' USD';
+  document.getElementById('bal-entries').textContent = sum.count||0;
+  document.getElementById('bal-avg').textContent     = fmt(sum.average||0);
+}
+function renderBalance() {
+  const total=allExpenses.reduce((s,e)=>s+e.amount,0);
+  const cnt=allExpenses.length;
+  document.getElementById('bal-amount').textContent  = fmt(total);
+  document.getElementById('bal-usd').textContent     = '≈ $'+(total/usdRate).toFixed(2)+' USD';
+  document.getElementById('bal-entries').textContent = cnt;
+  document.getElementById('bal-avg').textContent     = fmt(cnt?total/cnt:0);
+}
+
+function expCard(e) {
+  return `<div class="exp-item" onclick="openModal(${e.id})">
+    <div class="exp-emoji ${catBg(e.category)}">${catIcon(e.category)}</div>
+    <div class="exp-info">
+      <div class="exp-name">${e.name}</div>
+      <div class="exp-cat">${catName(e.category)}</div>
+    </div>
+    <div class="exp-right">
+      <div class="exp-amount ${catColor(e.category)}">${fmt(e.amount)}</div>
+      <div class="exp-date ltr">${e.date}</div>
+    </div>
+  </div>`;
+}
+
+function renderRecent() {
+  const recent=[...allExpenses].sort((a,b)=>b.id-a.id).slice(0,6);
+  document.getElementById('recent-count').textContent=allExpenses.length;
+  const el=document.getElementById('recent-list');
+  if (!recent.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">${t('empty_title')}</div><div class="empty-sub">${t('empty_sub')}</div></div>`;
+  } else el.innerHTML=recent.map(expCard).join('');
+}
+
+function renderList() {
+  const q=(document.getElementById('search-input').value||'').toLowerCase();
+  const filtered=allExpenses.filter(e=>
+    e.name.toLowerCase().includes(q)||catName(e.category).toLowerCase().includes(q)
+  ).sort((a,b)=>b.id-a.id);
+  document.getElementById('list-count').textContent=filtered.length;
+  const el=document.getElementById('all-list');
+  if (!filtered.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">${t('empty_title')}</div><div class="empty-sub">${t('empty_sub')}</div></div>`;
+  } else el.innerHTML=filtered.map(expCard).join('');
+}
+
+function renderCharts() {
+  const catMap={};
+  allExpenses.forEach(e=>{ catMap[e.category]=(catMap[e.category]||0)+e.amount; });
+  const grand=allExpenses.reduce((s,e)=>s+e.amount,0);
+  const sorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const colors=['#2d7a4f','#1a5fa8','#7a2d8f','#c47f1a','#2d4fa8','#c0392b','#c4521a','#0d6b47','#6b6660'];
+  const el=document.getElementById('cat-bars');
+  if (!sorted.length){el.innerHTML=`<div style="color:var(--ink3);font-size:.85rem;text-align:center;padding:20px">${t('empty_title')}</div>`;return;}
+  el.innerHTML=sorted.map(([cat,amt],i)=>`
+    <div class="bar-row">
+      <span class="bar-label">${catIcon(cat)} ${catName(cat)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${grand>0?(amt/grand*100).toFixed(1):0}%;background:${colors[i%colors.length]}"></div></div>
+      <span class="bar-val">${fmt(amt)}</span>
+    </div>`).join('');
+}
+
+function renderBudgets() {
+  const catMap={};
+  allExpenses.forEach(e=>{ catMap[e.category]=(catMap[e.category]||0)+e.amount; });
+  const el=document.getElementById('budget-list');
+  if (!allBudgets.length){el.innerHTML='';return;}
+  el.innerHTML=allBudgets.map(b=>{
+    const spent=catMap[b.category]||0;
+    const pct=Math.min((spent/b.limit)*100,100);
+    const over=pct>=100,warn=pct>=75&&!over;
+    const sc=over?'bud-over':warn?'bud-warn':'bud-ok';
+    const st=over?t('bud_over'):warn?t('bud_warn'):t('bud_ok');
+    const bc=over?'var(--red)':warn?'var(--gold)':'var(--green)';
+    return `<div class="bud-card">
+      <div class="bud-head">
+        <div class="bud-name">${catIcon(b.category)} ${catName(b.category)}</div>
+        <span class="bud-status ${sc}">${st}</span>
+      </div>
+      <div class="bud-amounts">${fmt(spent)} / ${fmt(b.limit)}</div>
+      <div class="bud-track"><div class="bud-fill" style="width:${pct.toFixed(1)}%;background:${bc}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════
+   MODAL
+══════════════════════════════ */
+function openModal(id) {
+  const e=allExpenses.find(x=>x.id===id); if(!e) return;
+  modalExpId=id;
+  document.getElementById('modal-title').textContent  = e.name;
+  document.getElementById('modal-cat').textContent    = catIcon(e.category)+' '+catName(e.category);
+  document.getElementById('modal-amount').textContent = fmt(e.amount);
+  document.getElementById('m-date-val').textContent   = e.date;
+  document.getElementById('m-note-val').textContent   = e.note||'—';
+  document.getElementById('del-btn-label').textContent= t('del_btn');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(ev) {
+  if (!ev||ev.target===document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+}
+
+/* ══════════════════════════════
+   NAVIGATION
+══════════════════════════════ */
+function showPanel(name) {
+  ['home','add','list','charts','settings'].forEach(p=>{
+    document.getElementById(p+'-panel').classList.remove('active');
+    const b=document.getElementById('nav-'+p); if(b) b.classList.remove('active');
+  });
+  document.getElementById(name+'-panel').classList.add('active');
+  const b=document.getElementById('nav-'+name); if(b) b.classList.add('active');
+  document.getElementById('fab-btn').style.display=name==='add'?'none':'';
+  if (name==='list') renderList();
+  if (name==='charts'){renderCharts();renderBudgets();}
+}
+function openAdd() { resetForm(); showPanel('add'); }
+
+function resetForm() {
+  document.getElementById('f-amount').value='';
+  document.getElementById('f-name').value='';
+  document.getElementById('f-note').value='';
+  selectedCat='Food'; currentStep=0;
+  [0,1,2].forEach(i=>{
+    document.getElementById('step'+i).classList.remove('active');
+    document.getElementById('dot'+i).classList.remove('active','done');
+  });
+  document.getElementById('step0').classList.add('active');
+  document.getElementById('dot0').classList.add('active');
+  buildCatGrid();
+}
+
+/* ══════════════════════════════
+   TOAST
+══════════════════════════════ */
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2400);
+}
+
+/* ══════════════════════════════
+   EXPORT CSV
+══════════════════════════════ */
+function exportCSV() {
+  if (!allExpenses.length){toast(lang==='ur'?'ڈیٹا نہیں':'No data!');return;}
+  let csv='ID,Name,Category,Amount(PKR),Date,Note\n';
+  allExpenses.forEach(e=>csv+=`${e.id},"${e.name}","${e.category}",${e.amount},${e.date},"${e.note}"\n`);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='expenses_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  toast(lang==='ur'?'📁 فائل تیار':'📁 CSV exported');
+}
+
+/* ══════════════════════════════
+   INIT
+══════════════════════════════ */
+document.getElementById('f-date').valueAsDate=new Date();
+document.getElementById('usd-rate').value=usdRate;
+
+if (lang) {
+  document.getElementById('lang-screen').style.display='none';
+  document.getElementById('app-screen').classList.add('active');
+  applyLang(); loadAll(); showPanel('home');
+}
+</script>
+</body>
+</html>
